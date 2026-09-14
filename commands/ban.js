@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+const { logModerationAction } = require('../moderationLogger');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -38,5 +39,14 @@ module.exports = {
       deleteMessageSeconds: deleteDays * 24 * 60 * 60,
     });
     await interaction.reply(`🔨 Banned **${target.tag}**. Reason: ${reason}`);
+
+    await logModerationAction(interaction.guild, {
+      action: '🔨 Member Banned',
+      color: 0xff0000,
+      target,
+      moderator: interaction.user,
+      reason,
+      extra: deleteDays > 0 ? `Deleted ${deleteDays} day(s) of message history` : undefined,
+    });
   },
 };

@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+const { logModerationAction } = require('../moderationLogger');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -29,5 +30,13 @@ module.exports = {
 
     await member.kick(reason);
     await interaction.reply(`👢 Kicked **${target.tag}**. Reason: ${reason}`);
+
+    await logModerationAction(interaction.guild, {
+      action: '👢 Member Kicked',
+      color: 0xffa500,
+      target,
+      moderator: interaction.user,
+      reason,
+    });
   },
 };

@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 const { addWarning } = require('../warningStore');
+const { logModerationAction } = require('../moderationLogger');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -19,5 +20,14 @@ module.exports = {
 
     const count = addWarning(interaction.guild.id, target.id, reason, interaction.user.tag);
     await interaction.reply(`⚠️ Warned **${target.tag}**. Reason: ${reason}\nThis is warning #${count} for this user.`);
+
+    await logModerationAction(interaction.guild, {
+      action: '⚠️ Member Warned',
+      color: 0xffcc00,
+      target,
+      moderator: interaction.user,
+      reason,
+      extra: `Warning #${count} for this user`,
+    });
   },
 };
