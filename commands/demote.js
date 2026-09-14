@@ -37,7 +37,7 @@ module.exports = {
 
     await member.roles.remove(role);
 
-    const record = addCase(interaction.guild.id, {
+    const record = await addCase(interaction.guild.id, {
       type: 'Demote',
       targetId: target.id,
       targetTag: target.tag,

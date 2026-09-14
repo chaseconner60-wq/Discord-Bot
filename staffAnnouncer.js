@@ -3,7 +3,7 @@ const { getPromotionLogChannel } = require('./configStore');
 
 // direction: 'promote' | 'demote'
 async function announceStaffChange(guild, { direction, targetUser, role, moderator, caseNumber }) {
-  const channelId = getPromotionLogChannel(guild.id);
+  const channelId = await getPromotionLogChannel(guild.id);
   if (!channelId) return;
 
   const channel = await guild.channels.fetch(channelId).catch(() => null);

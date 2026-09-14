@@ -19,7 +19,7 @@ function caseEmbed(guild, record) {
       { name: 'Reason', value: record.reason }
     )
     .setFooter({ text: guild.name, iconURL: guild.iconURL() ?? undefined })
-    .setTimestamp(record.timestamp);
+    .setTimestamp(Number(record.timestamp));
 }
 
 module.exports = {
@@ -58,7 +58,7 @@ module.exports = {
 
     if (sub === 'view') {
       const number = interaction.options.getInteger('number');
-      const record = getCase(interaction.guild.id, number);
+      const record = await getCase(interaction.guild.id, number);
       if (!record) {
         return interaction.reply({ content: `No case #${number} found.`, ephemeral: true });
       }
@@ -68,7 +68,7 @@ module.exports = {
     if (sub === 'edit-reason') {
       const number = interaction.options.getInteger('number');
       const newReason = interaction.options.getString('reason');
-      const record = editCaseReason(interaction.guild.id, number, newReason);
+      const record = await editCaseReason(interaction.guild.id, number, newReason);
       if (!record) {
         return interaction.reply({ content: `No case #${number} found.`, ephemeral: true });
       }
@@ -77,7 +77,7 @@ module.exports = {
 
     if (sub === 'delete') {
       const number = interaction.options.getInteger('number');
-      const success = deleteCase(interaction.guild.id, number);
+      const success = await deleteCase(interaction.guild.id, number);
       if (!success) {
         return interaction.reply({ content: `No case #${number} found.`, ephemeral: true });
       }
@@ -86,12 +86,12 @@ module.exports = {
 
     if (sub === 'history') {
       const target = interaction.options.getUser('user');
-      const records = getCasesForUser(interaction.guild.id, target.id);
+      const records = await getCasesForUser(interaction.guild.id, target.id);
       if (records.length === 0) {
         return interaction.reply(`**${target.tag}** has no cases on record.`);
       }
       const lines = records
-        .map(r => `**#${r.caseNumber}** — ${r.type} — ${r.reason} — <t:${Math.floor(r.timestamp / 1000)}:R>`)
+        .map(r => `**#${r.caseNumber}** — ${r.type} — ${r.reason} — <t:${Math.floor(Number(r.timestamp) / 1000)}:R>`)
         .join('\n');
       const embed = new EmbedBuilder()
         .setTitle(`Case history for ${target.tag}`)

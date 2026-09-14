@@ -18,11 +18,11 @@ module.exports = {
     const shouldClear = interaction.options.getBoolean('clear') ?? false;
 
     if (shouldClear) {
-      clearWarnings(interaction.guild.id, target.id);
+      await clearWarnings(interaction.guild.id, target.id);
       return interaction.reply(`🧽 Cleared all warnings for **${target.tag}**.`);
     }
 
-    const list = getWarnings(interaction.guild.id, target.id);
+    const list = await getWarnings(interaction.guild.id, target.id);
     if (list.length === 0) {
       return interaction.reply(`**${target.tag}** has no warnings.`);
     }
@@ -32,7 +32,7 @@ module.exports = {
       .setColor(0xffcc00)
       .setDescription(
         list
-          .map((w, i) => `**${i + 1}.** ${w.reason} — by ${w.moderatorTag} <t:${Math.floor(w.timestamp / 1000)}:R>`)
+          .map((w, i) => `**${i + 1}.** ${w.reason} — by ${w.moderatorTag} <t:${Math.floor(Number(w.timestamp) / 1000)}:R>`)
           .join('\n')
       );
 

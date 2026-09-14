@@ -19,9 +19,9 @@ module.exports = {
     const target = interaction.options.getUser('user');
     const reason = interaction.options.getString('reason');
 
-    const count = addWarning(interaction.guild.id, target.id, reason, interaction.user.tag);
+    const count = await addWarning(interaction.guild.id, target.id, reason, interaction.user.tag);
 
-    const record = addCase(interaction.guild.id, {
+    const record = await addCase(interaction.guild.id, {
       type: 'Warn',
       targetId: target.id,
       targetTag: target.tag,

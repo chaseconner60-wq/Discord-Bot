@@ -2,6 +2,7 @@ require('dotenv').config();
 const fs = require('node:fs');
 const path = require('node:path');
 const { Client, Collection, Events, GatewayIntentBits } = require('discord.js');
+const { initDatabase } = require('./db');
 
 const { DISCORD_TOKEN } = process.env;
 
@@ -55,4 +56,15 @@ client.on(Events.InteractionCreate, async interaction => {
   }
 });
 
-client.login(DISCORD_TOKEN);
+async function start() {
+  try {
+    await initDatabase();
+  } catch (error) {
+    console.error('Failed to initialize the database:', error);
+    process.exit(1);
+  }
+
+  await client.login(DISCORD_TOKEN);
+}
+
+start();

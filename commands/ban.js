@@ -39,7 +39,7 @@ module.exports = {
       reason,
       deleteMessageSeconds: deleteDays * 24 * 60 * 60,
     });
-    const record = addCase(interaction.guild.id, {
+    const record = await addCase(interaction.guild.id, {
       type: 'Ban',
       targetId: target.id,
       targetTag: target.tag,

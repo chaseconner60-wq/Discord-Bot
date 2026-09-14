@@ -17,7 +17,7 @@ module.exports = {
   async execute(interaction) {
     const channel = interaction.options.getChannel('channel');
 
-    setLogChannel(interaction.guild.id, channel.id);
+    await setLogChannel(interaction.guild.id, channel.id);
     await interaction.reply(`📋 Moderation actions will now be logged in ${channel}.`);
   },
 };

@@ -1,28 +1,28 @@
-// Simple in-memory warning store.
-// NOTE: This resets whenever the bot restarts/redeploys (e.g. on every Railway deploy).
-// For warnings that need to survive restarts, swap this for a real database
-// (e.g. SQLite, or a Railway-hosted Postgres) — ask Claude to help wire that up.
+// Warning storage, backed by Postgres. Persists across restarts/redeploys.
+const { pool } = require('./db');
 
-const warnings = new Map(); // key: `${guildId}:${userId}` -> array of { reason, moderatorTag, timestamp }
-
-function key(guildId, userId) {
-  return `${guildId}:${userId}`;
+async function addWarning(guildId, userId, reason, moderatorTag) {
+  await pool.query(
+    'INSERT INTO warnings (guild_id, user_id, reason, moderator_tag, created_at) VALUES ($1, $2, $3, $4, $5)',
+    [guildId, userId, reason, moderatorTag, Date.now()]
+  );
+  const { rows } = await pool.query(
+    'SELECT COUNT(*)::int AS count FROM warnings WHERE guild_id = $1 AND user_id = $2',
+    [guildId, userId]
+  );
+  return rows[0].count;
 }
 
-function addWarning(guildId, userId, reason, moderatorTag) {
-  const k = key(guildId, userId);
-  const list = warnings.get(k) ?? [];
-  list.push({ reason, moderatorTag, timestamp: Date.now() });
-  warnings.set(k, list);
-  return list.length;
+async function getWarnings(guildId, userId) {
+  const { rows } = await pool.query(
+    'SELECT reason, moderator_tag AS "moderatorTag", created_at AS timestamp FROM warnings WHERE guild_id = $1 AND user_id = $2 ORDER BY created_at ASC',
+    [guildId, userId]
+  );
+  return rows;
 }
 
-function getWarnings(guildId, userId) {
-  return warnings.get(key(guildId, userId)) ?? [];
-}
-
-function clearWarnings(guildId, userId) {
-  warnings.delete(key(guildId, userId));
+async function clearWarnings(guildId, userId) {
+  await pool.query('DELETE FROM warnings WHERE guild_id = $1 AND user_id = $2', [guildId, userId]);
 }
 
 module.exports = { addWarning, getWarnings, clearWarnings };

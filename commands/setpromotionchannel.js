@@ -17,7 +17,7 @@ module.exports = {
   async execute(interaction) {
     const channel = interaction.options.getChannel('channel');
 
-    setPromotionLogChannel(interaction.guild.id, channel.id);
+    await setPromotionLogChannel(interaction.guild.id, channel.id);
     await interaction.reply(`🎉 Staff promotions/demotions will now be announced in ${channel}.`);
   },
 };

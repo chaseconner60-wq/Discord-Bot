@@ -4,7 +4,7 @@ const { getLogChannel } = require('./configStore');
 // action: e.g. "Kick", "Ban", "Warn"
 // color: hex number, e.g. 0xff0000
 async function logModerationAction(guild, { action, color, target, moderator, reason, extra }) {
-  const channelId = getLogChannel(guild.id);
+  const channelId = await getLogChannel(guild.id);
   if (!channelId) return; // No log channel set — silently skip.
 
   const channel = await guild.channels.fetch(channelId).catch(() => null);

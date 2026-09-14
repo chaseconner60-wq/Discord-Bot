@@ -31,7 +31,7 @@ module.exports = {
 
     await member.kick(reason);
 
-    const record = addCase(interaction.guild.id, {
+    const record = await addCase(interaction.guild.id, {
       type: 'Kick',
       targetId: target.id,
       targetTag: target.tag,

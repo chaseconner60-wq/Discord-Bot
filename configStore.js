@@ -1,25 +1,30 @@
-// Simple in-memory config store (currently just holds each server's log channel).
-// NOTE: Like warningStore.js, this resets on every Railway redeploy/restart.
-// If you want this to survive restarts, ask Claude to wire up a real database.
+// Per-server settings storage, backed by Postgres. Persists across restarts/redeploys.
+const { pool } = require('./db');
 
-const config = new Map(); // key: guildId -> { logChannelId }
-
-function setLogChannel(guildId, channelId) {
-  const existing = config.get(guildId) ?? {};
-  config.set(guildId, { ...existing, logChannelId: channelId });
+async function setLogChannel(guildId, channelId) {
+  await pool.query(
+    `INSERT INTO guild_config (guild_id, log_channel_id) VALUES ($1, $2)
+     ON CONFLICT (guild_id) DO UPDATE SET log_channel_id = $2`,
+    [guildId, channelId]
+  );
 }
 
-function getLogChannel(guildId) {
-  return config.get(guildId)?.logChannelId ?? null;
+async function getLogChannel(guildId) {
+  const { rows } = await pool.query('SELECT log_channel_id FROM guild_config WHERE guild_id = $1', [guildId]);
+  return rows[0]?.log_channel_id ?? null;
 }
 
-function setPromotionLogChannel(guildId, channelId) {
-  const existing = config.get(guildId) ?? {};
-  config.set(guildId, { ...existing, promotionLogChannelId: channelId });
+async function setPromotionLogChannel(guildId, channelId) {
+  await pool.query(
+    `INSERT INTO guild_config (guild_id, promotion_log_channel_id) VALUES ($1, $2)
+     ON CONFLICT (guild_id) DO UPDATE SET promotion_log_channel_id = $2`,
+    [guildId, channelId]
+  );
 }
 
-function getPromotionLogChannel(guildId) {
-  return config.get(guildId)?.promotionLogChannelId ?? null;
+async function getPromotionLogChannel(guildId) {
+  const { rows } = await pool.query('SELECT promotion_log_channel_id FROM guild_config WHERE guild_id = $1', [guildId]);
+  return rows[0]?.promotion_log_channel_id ?? null;
 }
 
 module.exports = { setLogChannel, getLogChannel, setPromotionLogChannel, getPromotionLogChannel };

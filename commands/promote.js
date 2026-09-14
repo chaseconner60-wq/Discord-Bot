@@ -38,7 +38,7 @@ module.exports = {
 
     await member.roles.add(role);
 
-    const record = addCase(interaction.guild.id, {
+    const record = await addCase(interaction.guild.id, {
       type: 'Promote',
       targetId: target.id,
       targetTag: target.tag,
