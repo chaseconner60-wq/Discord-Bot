@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 const { logModerationAction } = require('../moderationLogger');
+const { addCase } = require('../caseStore');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -29,10 +30,19 @@ module.exports = {
     }
 
     await member.kick(reason);
-    await interaction.reply(`👢 Kicked **${target.tag}**. Reason: ${reason}`);
+
+    const record = addCase(interaction.guild.id, {
+      type: 'Kick',
+      targetId: target.id,
+      targetTag: target.tag,
+      moderatorTag: interaction.user.tag,
+      reason,
+    });
+
+    await interaction.reply(`👢 Kicked **${target.tag}**. Reason: ${reason}\nCase #${record.caseNumber}`);
 
     await logModerationAction(interaction.guild, {
-      action: '👢 Member Kicked',
+      action: `👢 Member Kicked — Case #${record.caseNumber}`,
       color: 0xffa500,
       target,
       moderator: interaction.user,

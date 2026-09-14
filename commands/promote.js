@@ -1,4 +1,6 @@
 const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+const { addCase } = require('../caseStore');
+const { announceStaffChange } = require('../staffAnnouncer');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -35,6 +37,23 @@ module.exports = {
     }
 
     await member.roles.add(role);
-    await interaction.reply(`⬆️ Promoted **${target.tag}** — added **${role.name}**.`);
+
+    const record = addCase(interaction.guild.id, {
+      type: 'Promote',
+      targetId: target.id,
+      targetTag: target.tag,
+      moderatorTag: interaction.user.tag,
+      reason: `Given the role ${role.name}`,
+    });
+
+    await interaction.reply(`⬆️ Promoted **${target.tag}** — added **${role.name}**. Case #${record.caseNumber}`);
+
+    await announceStaffChange(interaction.guild, {
+      direction: 'promote',
+      targetUser: target,
+      role,
+      moderator: interaction.user,
+      caseNumber: record.caseNumber,
+    });
   },
 };

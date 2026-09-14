@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 const { logModerationAction } = require('../moderationLogger');
+const { addCase } = require('../caseStore');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -38,10 +39,19 @@ module.exports = {
       reason,
       deleteMessageSeconds: deleteDays * 24 * 60 * 60,
     });
-    await interaction.reply(`🔨 Banned **${target.tag}**. Reason: ${reason}`);
+    const record = addCase(interaction.guild.id, {
+      type: 'Ban',
+      targetId: target.id,
+      targetTag: target.tag,
+      moderatorTag: interaction.user.tag,
+      reason,
+      extra: deleteDays > 0 ? `Deleted ${deleteDays} day(s) of message history` : undefined,
+    });
+
+    await interaction.reply(`🔨 Banned **${target.tag}**. Reason: ${reason}\nCase #${record.caseNumber}`);
 
     await logModerationAction(interaction.guild, {
-      action: '🔨 Member Banned',
+      action: `🔨 Member Banned — Case #${record.caseNumber}`,
       color: 0xff0000,
       target,
       moderator: interaction.user,

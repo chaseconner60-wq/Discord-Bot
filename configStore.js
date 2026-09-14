@@ -13,4 +13,13 @@ function getLogChannel(guildId) {
   return config.get(guildId)?.logChannelId ?? null;
 }
 
-module.exports = { setLogChannel, getLogChannel };
+function setPromotionLogChannel(guildId, channelId) {
+  const existing = config.get(guildId) ?? {};
+  config.set(guildId, { ...existing, promotionLogChannelId: channelId });
+}
+
+function getPromotionLogChannel(guildId) {
+  return config.get(guildId)?.promotionLogChannelId ?? null;
+}
+
+module.exports = { setLogChannel, getLogChannel, setPromotionLogChannel, getPromotionLogChannel };

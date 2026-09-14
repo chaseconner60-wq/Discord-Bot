@@ -1,4 +1,6 @@
 const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+const { addCase } = require('../caseStore');
+const { announceStaffChange } = require('../staffAnnouncer');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -34,6 +36,23 @@ module.exports = {
     }
 
     await member.roles.remove(role);
-    await interaction.reply(`⬇️ Demoted **${target.tag}** — removed **${role.name}**.`);
+
+    const record = addCase(interaction.guild.id, {
+      type: 'Demote',
+      targetId: target.id,
+      targetTag: target.tag,
+      moderatorTag: interaction.user.tag,
+      reason: `Removed the role ${role.name}`,
+    });
+
+    await interaction.reply(`⬇️ Demoted **${target.tag}** — removed **${role.name}**. Case #${record.caseNumber}`);
+
+    await announceStaffChange(interaction.guild, {
+      direction: 'demote',
+      targetUser: target,
+      role,
+      moderator: interaction.user,
+      caseNumber: record.caseNumber,
+    });
   },
 };
