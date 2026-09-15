@@ -121,6 +121,17 @@ client.on(Events.InteractionCreate, async interaction => {
       }
     }
   } catch (error) {
+    // Discord invalidates an interaction's token if we don't respond within 3
+    // seconds (code 10062), or if it was somehow already acknowledged (40060).
+    // These are rare, unavoidable races (a network hiccup, a redeploy landing
+    // at the wrong instant, a double-click) rather than bugs in our code —
+    // any reply attempt at this point would fail the same way, so we just log
+    // it quietly and move on instead of dumping a full stack trace.
+    if (error.code === 10062 || error.code === 40060) {
+      console.warn(`Interaction expired before it could be handled (code ${error.code}) — this is an occasional Discord-side timing issue, not a bug.`);
+      return;
+    }
+
     console.error('Error handling interaction:', error);
     const errorResponse = { content: 'Something went wrong handling that.', ephemeral: true };
     if (interaction.replied || interaction.deferred) {
