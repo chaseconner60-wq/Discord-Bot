@@ -26,7 +26,15 @@ function ticketControlsRow(claimed) {
   );
 }
 
-async function openTicket(interaction) {
+function closeConfirmRow() {
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId('ticket_close_confirm').setLabel('Yes, close it').setStyle(ButtonStyle.Danger),
+    new ButtonBuilder().setCustomId('ticket_close_cancel').setLabel('Cancel').setStyle(ButtonStyle.Secondary)
+  );
+}
+
+// Called when a member picks an option from the ticket category dropdown.
+async function openTicket(interaction, ticketType) {
   const guild = interaction.guild;
   const config = await getTicketConfig(guild.id);
 
@@ -74,6 +82,7 @@ async function openTicket(interaction) {
     channelId: channel.id,
     openerId: interaction.user.id,
     openerTag: interaction.user.tag,
+    ticketType,
   });
 
   const embed = new EmbedBuilder()
@@ -84,6 +93,7 @@ async function openTicket(interaction) {
       `Welcome, ${interaction.user}! A member of <@&${config.supportRoleId}> will be with you shortly.\n\n` +
       `Please describe your issue in as much detail as you can — this helps us help you faster.`
     )
+    .addFields({ name: 'Category', value: ticketType || 'General', inline: true })
     .setFooter({ text: `Opened by ${interaction.user.tag}`, iconURL: interaction.user.displayAvatarURL() })
     .setTimestamp();
 
@@ -118,18 +128,39 @@ async function claimTicketAction(interaction) {
   await interaction.channel.send(`✅ ${interaction.user} has claimed this ticket.`);
 }
 
-async function closeTicketAction(interaction) {
+// Step 1: clicking "Close Ticket" now just asks for confirmation instead of closing right away.
+async function requestCloseConfirmation(interaction) {
+  const ticket = await getTicketByChannel(interaction.guild.id, interaction.channel.id);
+  if (!ticket) {
+    return interaction.reply({ content: 'This doesn\'t look like an active ticket channel.', ephemeral: true });
+  }
+  if (ticket.status !== 'open') {
+    return interaction.reply({ content: 'This ticket is already closed.', ephemeral: true });
+  }
+
+  await interaction.reply({
+    content: '⚠️ Are you sure you want to close this ticket? A transcript will be saved.',
+    components: [closeConfirmRow()],
+  });
+}
+
+async function cancelClose(interaction) {
+  await interaction.update({ content: '✅ Close cancelled.', components: [] });
+}
+
+// Step 2: only runs after the confirm button is clicked.
+async function confirmClose(interaction) {
   const guild = interaction.guild;
   const ticket = await getTicketByChannel(guild.id, interaction.channel.id);
 
   if (!ticket) {
-    return interaction.reply({ content: 'This doesn\'t look like an active ticket channel.', ephemeral: true });
+    return interaction.update({ content: 'This doesn\'t look like an active ticket channel.', components: [] });
   }
 
-  await interaction.reply('🔒 Closing this ticket and generating a transcript...');
+  await interaction.update({ content: '🔒 Closing this ticket and generating a transcript...', components: [] });
 
   const config = await getTicketConfig(guild.id);
-  const closedRecord = await closeTicket(guild.id, interaction.channel.id);
+  await closeTicket(guild.id, interaction.channel.id);
 
   const transcriptFile = await buildTranscript(interaction.channel, {
     ticketNumber: ticket.ticketNumber,
@@ -145,6 +176,7 @@ async function closeTicketAction(interaction) {
         .setAuthor({ name: guild.name, iconURL: guild.iconURL() ?? undefined })
         .setTitle(`🎫 Ticket #${ticket.ticketNumber} Closed`)
         .addFields(
+          { name: 'Category', value: ticket.ticketType || 'General', inline: true },
           { name: 'Opened by', value: ticket.openerTag, inline: true },
           { name: 'Closed by', value: interaction.user.tag, inline: true },
           { name: 'Claimed by', value: ticket.claimedByTag ?? 'Not claimed', inline: true }
@@ -155,10 +187,16 @@ async function closeTicketAction(interaction) {
     }
   }
 
-  // Give people a moment to read the closing message before the channel disappears.
   setTimeout(() => {
     interaction.channel.delete().catch(() => {});
   }, 5000);
 }
 
-module.exports = { openTicket, claimTicketAction, closeTicketAction, ticketControlsRow };
+module.exports = {
+  openTicket,
+  claimTicketAction,
+  requestCloseConfirmation,
+  confirmClose,
+  cancelClose,
+  ticketControlsRow,
+};

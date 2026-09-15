@@ -68,10 +68,16 @@ async function initDatabase() {
       opener_tag TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'open',
       claimed_by_tag TEXT,
+      ticket_type TEXT,
       created_at BIGINT NOT NULL,
       closed_at BIGINT,
       PRIMARY KEY (guild_id, ticket_number)
     );
+  `);
+
+  // In case tickets already existed from before categories were added.
+  await pool.query(`
+    ALTER TABLE tickets ADD COLUMN IF NOT EXISTS ticket_type TEXT;
   `);
 
   console.log('Database tables ready.');

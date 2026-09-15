@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { Client, Collection, Events, GatewayIntentBits } = require('discord.js');
 const { initDatabase } = require('./db');
-const { openTicket, claimTicketAction, closeTicketAction } = require('./ticketActions');
+const { openTicket, claimTicketAction, requestCloseConfirmation, confirmClose, cancelClose } = require('./ticketActions');
 
 const { DISCORD_TOKEN } = process.env;
 
@@ -52,9 +52,16 @@ client.on(Events.InteractionCreate, async interaction => {
     }
 
     if (interaction.isButton()) {
-      if (interaction.customId === 'ticket_open') return await openTicket(interaction);
       if (interaction.customId === 'ticket_claim') return await claimTicketAction(interaction);
-      if (interaction.customId === 'ticket_close') return await closeTicketAction(interaction);
+      if (interaction.customId === 'ticket_close') return await requestCloseConfirmation(interaction);
+      if (interaction.customId === 'ticket_close_confirm') return await confirmClose(interaction);
+      if (interaction.customId === 'ticket_close_cancel') return await cancelClose(interaction);
+    }
+
+    if (interaction.isStringSelectMenu()) {
+      if (interaction.customId === 'ticket_type_select') {
+        return await openTicket(interaction, interaction.values[0]);
+      }
     }
   } catch (error) {
     console.error('Error handling interaction:', error);
