@@ -80,6 +80,25 @@ async function initDatabase() {
     ALTER TABLE tickets ADD COLUMN IF NOT EXISTS ticket_type TEXT;
   `);
 
+  await pool.query(`
+    ALTER TABLE guild_config
+      ADD COLUMN IF NOT EXISTS partner_channel_id TEXT,
+      ADD COLUMN IF NOT EXISTS partner_message_id TEXT;
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS partners (
+      id SERIAL PRIMARY KEY,
+      guild_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      invite_url TEXT NOT NULL,
+      description TEXT,
+      icon_url TEXT,
+      added_by_tag TEXT NOT NULL,
+      created_at BIGINT NOT NULL
+    );
+  `);
+
   console.log('Database tables ready.');
 }
 

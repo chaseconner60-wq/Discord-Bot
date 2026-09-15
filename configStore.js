@@ -49,6 +49,22 @@ async function getTicketConfig(guildId) {
   return rows[0] ?? { categoryId: null, supportRoleId: null, transcriptChannelId: null };
 }
 
+async function setPartnerPanel(guildId, channelId, messageId) {
+  await pool.query(
+    `INSERT INTO guild_config (guild_id, partner_channel_id, partner_message_id) VALUES ($1, $2, $3)
+     ON CONFLICT (guild_id) DO UPDATE SET partner_channel_id = $2, partner_message_id = $3`,
+    [guildId, channelId, messageId]
+  );
+}
+
+async function getPartnerPanel(guildId) {
+  const { rows } = await pool.query(
+    'SELECT partner_channel_id AS "channelId", partner_message_id AS "messageId" FROM guild_config WHERE guild_id = $1',
+    [guildId]
+  );
+  return rows[0] ?? { channelId: null, messageId: null };
+}
+
 module.exports = {
   setLogChannel,
   getLogChannel,
@@ -56,4 +72,6 @@ module.exports = {
   getPromotionLogChannel,
   setTicketConfig,
   getTicketConfig,
+  setPartnerPanel,
+  getPartnerPanel,
 };
