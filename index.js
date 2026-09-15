@@ -1,9 +1,10 @@
 require('dotenv').config();
 const fs = require('node:fs');
 const path = require('node:path');
-const { Client, Collection, Events, GatewayIntentBits } = require('discord.js');
+const { Client, Collection, Events, GatewayIntentBits, EmbedBuilder, PermissionsBitField } = require('discord.js');
 const { initDatabase } = require('./db');
 const { openTicket, claimTicketAction, requestCloseConfirmation, confirmClose, cancelClose } = require('./ticketActions');
+const { handleSetupSelection } = require('./setupWizard');
 
 const { DISCORD_TOKEN } = process.env;
 
@@ -39,6 +40,39 @@ client.once(Events.ClientReady, readyClient => {
   console.log(`Logged in as ${readyClient.user.tag}. Ready to go!`);
 });
 
+// Fires whenever the bot is added to a new server. Finds a channel it can
+// actually post in and drops a welcome message pointing admins to /setup.
+client.on(Events.GuildCreate, async guild => {
+  try {
+    const me = guild.members.me ?? (await guild.members.fetchMe());
+
+    const targetChannel =
+      (guild.systemChannel &&
+        guild.systemChannel.permissionsFor(me)?.has(PermissionsBitField.Flags.SendMessages) &&
+        guild.systemChannel) ||
+      guild.channels.cache
+        .filter(c => c.isTextBased() && c.permissionsFor(me)?.has(PermissionsBitField.Flags.SendMessages))
+        .sort((a, b) => a.rawPosition - b.rawPosition)
+        .first();
+
+    if (!targetChannel) return;
+
+    const embed = new EmbedBuilder()
+      .setColor(0x2dd4bf)
+      .setTitle('👋 Thanks for adding Utility Pro!')
+      .setDescription(
+        `I handle moderation, staff promotions, a support ticket system, and a partner showcase — all configurable.\n\n` +
+        `**To get started, run \`/setup\`** — a quick guided setup (channel and role pickers, no typing IDs) that configures everything in about a minute.\n\n` +
+        `You can re-run \`/setup\` any time to change your settings later.`
+      )
+      .setFooter({ text: 'Only members with "Manage Server" can run /setup.' });
+
+    await targetChannel.send({ embeds: [embed] });
+  } catch (error) {
+    console.error('Failed to send welcome message on guild join:', error);
+  }
+});
+
 client.on(Events.InteractionCreate, async interaction => {
   try {
     if (interaction.isChatInputCommand()) {
@@ -61,6 +95,12 @@ client.on(Events.InteractionCreate, async interaction => {
     if (interaction.isStringSelectMenu()) {
       if (interaction.customId === 'ticket_type_select') {
         return await openTicket(interaction, interaction.values[0]);
+      }
+    }
+
+    if (interaction.isChannelSelectMenu() || interaction.isRoleSelectMenu()) {
+      if (interaction.customId === 'setup_select') {
+        return await handleSetupSelection(interaction);
       }
     }
   } catch (error) {
