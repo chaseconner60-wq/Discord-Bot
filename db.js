@@ -99,6 +99,16 @@ async function initDatabase() {
     );
   `);
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS ticket_categories (
+      id SERIAL PRIMARY KEY,
+      guild_id TEXT NOT NULL,
+      label TEXT NOT NULL,
+      category_id TEXT NOT NULL,
+      created_at BIGINT NOT NULL
+    );
+  `);
+
   console.log('Database tables ready.');
 }
 

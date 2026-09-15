@@ -6,8 +6,7 @@ const {
   StringSelectMenuBuilder,
 } = require('discord.js');
 const { getTicketConfig } = require('../configStore');
-
-const DEFAULT_CATEGORIES = ['General Support', 'Billing', 'Technical Issue', 'Report a User'];
+const { listTicketCategories } = require('../ticketCategoryStore');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -19,31 +18,25 @@ module.exports = {
     .addStringOption(option =>
       option.setName('description').setDescription('Panel description').setRequired(false)
     )
-    .addStringOption(option =>
-      option
-        .setName('categories')
-        .setDescription('Comma-separated support categories (default: General, Billing, Technical, Report a User)')
-        .setRequired(false)
-    )
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
   async execute(interaction) {
     const config = await getTicketConfig(interaction.guild.id);
     if (!config.categoryId || !config.supportRoleId) {
       return interaction.reply({
-        content: 'Run `/ticketsetup` first to configure a category, support role, and transcript channel.',
+        content: 'Run `/ticketsetup` first to configure a default category, support role, and transcript channel.',
         ephemeral: true,
       });
     }
+
+    const routings = await listTicketCategories(interaction.guild.id);
+    // Use configured sub-category labels if any exist, otherwise fall back to one generic option.
+    const dropdownLabels = routings.length > 0 ? routings.map(r => r.label) : ['General Support'];
 
     const title = interaction.options.getString('title') ?? 'Need help?';
     const description =
       interaction.options.getString('description') ??
       'Pick the option below that best matches what you need, and a private ticket will be created for you.';
-    const categoriesInput = interaction.options.getString('categories');
-    const categories = categoriesInput
-      ? categoriesInput.split(',').map(c => c.trim()).filter(Boolean).slice(0, 25)
-      : DEFAULT_CATEGORIES;
 
     const embed = new EmbedBuilder()
       .setColor(0x2dd4bf)
@@ -55,7 +48,7 @@ module.exports = {
     const menu = new StringSelectMenuBuilder()
       .setCustomId('ticket_type_select')
       .setPlaceholder('Select a support category...')
-      .addOptions(categories.map(c => ({ label: c, value: c })));
+      .addOptions(dropdownLabels.slice(0, 25).map(label => ({ label, value: label })));
 
     const row = new ActionRowBuilder().addComponents(menu);
 

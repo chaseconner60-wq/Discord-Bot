@@ -8,6 +8,7 @@ const {
 } = require('discord.js');
 const { getTicketConfig } = require('./configStore');
 const { createTicket, getOpenTicketForUser, getTicketByChannel, claimTicket, closeTicket } = require('./ticketStore');
+const { getTicketCategoryByLabel } = require('./ticketCategoryStore');
 const { buildTranscript } = require('./transcript');
 
 const BRAND_COLOR = 0x2dd4bf; // teal, matches the bot's logo
@@ -55,12 +56,14 @@ async function openTicket(interaction, ticketType) {
 
   await interaction.deferReply({ ephemeral: true });
 
+  const routedCategoryId = (await getTicketCategoryByLabel(guild.id, ticketType)) || config.categoryId;
+
   const safeName = interaction.user.username.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20) || 'user';
 
   const channel = await guild.channels.create({
     name: `ticket-${safeName}`,
     type: ChannelType.GuildText,
-    parent: config.categoryId,
+    parent: routedCategoryId,
     permissionOverwrites: [
       { id: guild.roles.everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
       {
