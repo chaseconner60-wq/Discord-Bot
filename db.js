@@ -109,6 +109,36 @@ async function initDatabase() {
     );
   `);
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS giveaways (
+      id SERIAL PRIMARY KEY,
+      guild_id TEXT NOT NULL,
+      giveaway_number INTEGER NOT NULL,
+      channel_id TEXT NOT NULL,
+      message_id TEXT,
+      host_id TEXT NOT NULL,
+      host_tag TEXT NOT NULL,
+      prize TEXT NOT NULL,
+      description TEXT,
+      winner_count INTEGER NOT NULL DEFAULT 1,
+      required_role_id TEXT,
+      end_at BIGINT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'active',
+      winner_ids TEXT,
+      created_at BIGINT NOT NULL
+    );
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS giveaway_entrants (
+      giveaway_pk INTEGER NOT NULL REFERENCES giveaways(id) ON DELETE CASCADE,
+      user_id TEXT NOT NULL,
+      user_tag TEXT NOT NULL,
+      entered_at BIGINT NOT NULL,
+      PRIMARY KEY (giveaway_pk, user_id)
+    );
+  `);
+
   console.log('Database tables ready.');
 }
 

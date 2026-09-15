@@ -5,6 +5,8 @@ const { Client, Collection, Events, GatewayIntentBits, EmbedBuilder, Permissions
 const { initDatabase } = require('./db');
 const { openTicket, claimTicketAction, requestCloseConfirmation, confirmClose, cancelClose } = require('./ticketActions');
 const { handleSetupSelection } = require('./setupWizard');
+const { toggleEntry } = require('./giveawayEngine');
+const { startGiveawayScheduler } = require('./giveawayScheduler');
 
 const { DISCORD_TOKEN, CLIENT_ID } = process.env;
 
@@ -107,6 +109,7 @@ client.on(Events.InteractionCreate, async interaction => {
       if (interaction.customId === 'ticket_close') return await requestCloseConfirmation(interaction);
       if (interaction.customId === 'ticket_close_confirm') return await confirmClose(interaction);
       if (interaction.customId === 'ticket_close_cancel') return await cancelClose(interaction);
+      if (interaction.customId === 'giveaway_enter') return await toggleEntry(interaction);
     }
 
     if (interaction.isStringSelectMenu()) {
@@ -151,6 +154,7 @@ async function start() {
   }
 
   await client.login(DISCORD_TOKEN);
+  startGiveawayScheduler(client);
 }
 
 start();
