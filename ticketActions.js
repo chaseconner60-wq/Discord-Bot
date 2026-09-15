@@ -49,7 +49,17 @@ async function openTicket(interaction, ticketType) {
 
   const existing = await getOpenTicketForUser(guild.id, interaction.user.id);
   if (existing) {
-    return interaction.editReply(`You already have an open ticket: <#${existing.channelId}>`);
+    // The database says they have an open ticket — but if that channel was
+    // deleted manually (instead of using the Close button), it's stale data.
+    // Verify the channel actually still exists before blocking them.
+    const stillExists = await guild.channels.fetch(existing.channelId).catch(() => null);
+
+    if (stillExists) {
+      return interaction.editReply(`You already have an open ticket: <#${existing.channelId}>`);
+    }
+
+    // Channel is gone — self-heal by marking that stale ticket closed, then continue.
+    await closeTicket(guild.id, existing.channelId);
   }
 
   const routedCategoryId = (await getTicketCategoryByLabel(guild.id, ticketType)) || config.categoryId;
