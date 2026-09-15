@@ -1,17 +1,19 @@
 require('dotenv').config();
 const fs = require('node:fs');
 const path = require('node:path');
-const { Client, Collection, Events, GatewayIntentBits, EmbedBuilder, PermissionsBitField } = require('discord.js');
+const { Client, Collection, Events, GatewayIntentBits, EmbedBuilder, PermissionsBitField, REST, Routes } = require('discord.js');
 const { initDatabase } = require('./db');
 const { openTicket, claimTicketAction, requestCloseConfirmation, confirmClose, cancelClose } = require('./ticketActions');
 const { handleSetupSelection } = require('./setupWizard');
 
-const { DISCORD_TOKEN } = process.env;
+const { DISCORD_TOKEN, CLIENT_ID } = process.env;
 
 if (!DISCORD_TOKEN) {
   console.error('Missing DISCORD_TOKEN in your .env file (or Railway variables).');
   process.exit(1);
 }
+
+const rest = new REST().setToken(DISCORD_TOKEN);
 
 // Intents control which events Discord sends your bot.
 // GuildMessages + MessageContent are needed so ticket transcripts can include
@@ -40,9 +42,24 @@ client.once(Events.ClientReady, readyClient => {
   console.log(`Logged in as ${readyClient.user.tag}. Ready to go!`);
 });
 
-// Fires whenever the bot is added to a new server. Finds a channel it can
-// actually post in and drops a welcome message pointing admins to /setup.
 client.on(Events.GuildCreate, async guild => {
+  // Global commands can take up to an hour to show up in a brand-new server.
+  // Registering the same commands directly to this specific guild makes them
+  // appear instantly. Discord automatically prefers the guild copy over the
+  // global one when both exist, so this never causes duplicates.
+  if (CLIENT_ID) {
+    try {
+      const commandsData = [...client.commands.values()].map(c => c.data.toJSON());
+      await rest.put(Routes.applicationGuildCommands(CLIENT_ID, guild.id), { body: commandsData });
+      console.log(`Instantly registered ${commandsData.length} commands to new guild: ${guild.name}`);
+    } catch (error) {
+      console.error(`Failed to instantly register commands for guild ${guild.name}:`, error);
+    }
+  } else {
+    console.warn('CLIENT_ID is not set — skipping instant per-guild command registration.');
+  }
+
+  // Finds a channel it can actually post in and drops a welcome message pointing admins to /setup.
   try {
     const me = guild.members.me ?? (await guild.members.fetchMe());
 
