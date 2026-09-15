@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { Client, Collection, Events, GatewayIntentBits } = require('discord.js');
 const { initDatabase } = require('./db');
+const { openTicket, claimTicketAction, closeTicketAction } = require('./ticketActions');
 
 const { DISCORD_TOKEN } = process.env;
 
@@ -12,8 +13,13 @@ if (!DISCORD_TOKEN) {
 }
 
 // Intents control which events Discord sends your bot.
-// Guilds is enough for slash commands; add more (e.g. GuildMessages) if you need them later.
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+// GuildMessages + MessageContent are needed so ticket transcripts can include
+// what was actually said. MessageContent is a "privileged" intent — you must
+// also turn it on under your app's Bot page in the Discord Developer Portal,
+// or the bot will fail to log in once this is enabled here.
+const client = new Client({
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
+});
 
 client.commands = new Collection();
 
@@ -34,24 +40,29 @@ client.once(Events.ClientReady, readyClient => {
 });
 
 client.on(Events.InteractionCreate, async interaction => {
-  if (!interaction.isChatInputCommand()) return;
-
-  const command = interaction.client.commands.get(interaction.commandName);
-
-  if (!command) {
-    console.error(`No command matching "${interaction.commandName}" was found.`);
-    return;
-  }
-
   try {
-    await command.execute(interaction);
+    if (interaction.isChatInputCommand()) {
+      const command = interaction.client.commands.get(interaction.commandName);
+      if (!command) {
+        console.error(`No command matching "${interaction.commandName}" was found.`);
+        return;
+      }
+      await command.execute(interaction);
+      return;
+    }
+
+    if (interaction.isButton()) {
+      if (interaction.customId === 'ticket_open') return await openTicket(interaction);
+      if (interaction.customId === 'ticket_claim') return await claimTicketAction(interaction);
+      if (interaction.customId === 'ticket_close') return await closeTicketAction(interaction);
+    }
   } catch (error) {
-    console.error(`Error executing "${interaction.commandName}":`, error);
-    const errorResponse = { content: 'There was an error running this command.', ephemeral: true };
+    console.error('Error handling interaction:', error);
+    const errorResponse = { content: 'Something went wrong handling that.', ephemeral: true };
     if (interaction.replied || interaction.deferred) {
-      await interaction.followUp(errorResponse);
+      await interaction.followUp(errorResponse).catch(() => {});
     } else {
-      await interaction.reply(errorResponse);
+      await interaction.reply(errorResponse).catch(() => {});
     }
   }
 });

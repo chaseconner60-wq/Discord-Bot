@@ -43,7 +43,34 @@ async function initDatabase() {
     CREATE TABLE IF NOT EXISTS guild_config (
       guild_id TEXT PRIMARY KEY,
       log_channel_id TEXT,
-      promotion_log_channel_id TEXT
+      promotion_log_channel_id TEXT,
+      ticket_category_id TEXT,
+      support_role_id TEXT,
+      transcript_channel_id TEXT
+    );
+  `);
+
+  // In case this table already existed from before tickets were added,
+  // make sure the new columns exist too.
+  await pool.query(`
+    ALTER TABLE guild_config
+      ADD COLUMN IF NOT EXISTS ticket_category_id TEXT,
+      ADD COLUMN IF NOT EXISTS support_role_id TEXT,
+      ADD COLUMN IF NOT EXISTS transcript_channel_id TEXT;
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS tickets (
+      guild_id TEXT NOT NULL,
+      ticket_number INTEGER NOT NULL,
+      channel_id TEXT NOT NULL,
+      opener_id TEXT NOT NULL,
+      opener_tag TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'open',
+      claimed_by_tag TEXT,
+      created_at BIGINT NOT NULL,
+      closed_at BIGINT,
+      PRIMARY KEY (guild_id, ticket_number)
     );
   `);
 
